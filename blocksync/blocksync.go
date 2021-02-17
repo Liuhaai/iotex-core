@@ -20,6 +20,7 @@ import (
 	"github.com/iotexproject/iotex-core/blockchain/block"
 	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/consensus"
+	"github.com/iotexproject/iotex-core/dispatcher"
 	"github.com/iotexproject/iotex-core/pkg/lifecycle"
 	"github.com/iotexproject/iotex-core/pkg/log"
 	"github.com/iotexproject/iotex-core/pkg/routine"
@@ -154,6 +155,9 @@ func (bs *blockSyncer) Stop(ctx context.Context) error {
 func (bs *blockSyncer) ProcessBlock(_ context.Context, blk *block.Block) error {
 	var needSync bool
 	moved, re := bs.buf.Flush(blk)
+	if moved && re == bCheckinSkipNil {
+		return dispatcher.ErrDebug
+	}
 	switch re {
 	case bCheckinLower:
 		log.L().Debug("Drop block lower than buffer's accept height.")

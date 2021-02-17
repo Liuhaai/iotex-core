@@ -1,7 +1,10 @@
 package staking
 
 import (
+	"fmt"
+	"github.com/iotexproject/iotex-core/ioctl/util"
 	"math/big"
+	"os"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -39,6 +42,59 @@ func (vr *VoteReviser) Revise(csm CandidateStateManager, height uint64) error {
 		vr.storeToCache(height, cands)
 	}
 	return vr.flush(height, csm)
+}
+
+func (vr *VoteReviser) Check(csm CandidateStateManager, height uint64) error {
+	file, err := os.OpenFile("votes.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	s := fmt.Sprintf("======= height = %d\n", height)
+	file.WriteString(s)
+	revised, err := vr.calculateVoteWeight(csm)
+	if err != nil {
+		file.WriteString(err.Error() + "\n")
+		return err
+	}
+	cands, _, err := getAllCandidates(csm)
+	if err != nil {
+		file.WriteString(err.Error() + "\n")
+		return err
+	}
+	s = fmt.Sprintf("|| cand size: revise = %d, fromdb = %d\n", len(revised), len(cands))
+	file.WriteString(s)
+	if len(revised) != len(cands) {
+		return ErrTypeAssertion
+	}
+
+	sort.Sort(cands)
+	revise := make(map[string]*Candidate)
+	for i := range revised {
+		revise[revised[i].Owner.String()] = revised[i]
+	}
+	for i := range cands {
+		owner := cands[i].Owner.String()
+		s := fmt.Sprintf("|| ==> %s\n", owner)
+		file.WriteString(s)
+		candm, ok := revise[owner]
+		if !ok {
+			file.WriteString("owner does not exist in revised\n")
+			return ErrTypeAssertion
+		}
+
+		s = fmt.Sprintf("|| votes: revise = %d, fromdb = %d\n",
+			util.RauToString(candm.Votes, util.IotxDecimalNum), util.RauToString(cands[i].Votes, util.IotxDecimalNum))
+		file.WriteString(s)
+		s = fmt.Sprintf("|| stake: revise = %d, fromdb = %d\n",
+			util.RauToString(candm.SelfStake, util.IotxDecimalNum), util.RauToString(cands[i].SelfStake, util.IotxDecimalNum))
+		file.WriteString(s)
+		if cands[i].Votes.Cmp(candm.Votes) != 0 || cands[i].SelfStake.Cmp(candm.SelfStake) != 0 {
+			return ErrTypeAssertion
+		}
+	}
+	return nil
 }
 
 func (vr *VoteReviser) storeToCache(height uint64, cands CandidateList) {

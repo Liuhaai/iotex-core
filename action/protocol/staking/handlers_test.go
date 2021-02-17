@@ -10,6 +10,11 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/iotexproject/iotex-core/ioctl/cmd/bc"
+	"github.com/iotexproject/iotex-core/ioctl/util"
+	"github.com/iotexproject/iotex-proto/golang/iotexapi"
 	"math/big"
 	"testing"
 	"time"
@@ -53,6 +58,71 @@ func (m *CandidateCenter) deleteForTestOnly(owner address.Address) {
 	if m.change.containsOwner(owner) {
 		m.change.delete(owner)
 		m.size--
+	}
+}
+
+func TestZh(t *testing.T) {
+	require := require.New(t)
+
+	readStakingDataRequest := &iotexapi.ReadStakingDataRequest{
+		Request: &iotexapi.ReadStakingDataRequest_BucketsByCandidate{
+			BucketsByCandidate: &iotexapi.ReadStakingDataRequest_VoteBucketsByCandidate{
+				CandName: "zhcapital",
+				Pagination: &iotexapi.PaginationParam{
+					Offset: 0,
+					Limit:  200,
+				},
+			},
+		},
+	}
+	list, err := bc.GetBucketList(iotexapi.ReadStakingDataMethod_BUCKETS_BY_CANDIDATE, readStakingDataRequest)
+	require.NoError(err)
+
+	CalConsts := genesis.VoteWeightCalConsts{
+		DurationLg: 1.2,
+		AutoStake:  1,
+		SelfStake:  1.06,
+	}
+	total := &big.Int{}
+	for i := range list.Buckets {
+		bucket := toNativeBucket(list.Buckets[i])
+		if bucket.isUnstaked() {
+			continue
+		}
+		vote := calculateVoteWeight(CalConsts, bucket, i == 0)
+		total.Add(total, vote)
+		fmt.Println("{")
+		fmt.Println("  index:", bucket.Index)
+		fmt.Println("  amount:", util.RauToString(bucket.StakedAmount, util.IotxDecimalNum))
+		fmt.Println("  vote:", util.RauToString(vote, util.IotxDecimalNum))
+		fmt.Println("}")
+	}
+	fmt.Println("total:", util.RauToString(total, util.IotxDecimalNum))
+}
+
+func toNativeBucket(pb *iotextypes.VoteBucket) *VoteBucket {
+	amount, ok := big.NewInt(0).SetString(pb.StakedAmount, 10)
+	if !ok {
+		panic("error amount")
+	}
+
+	stakeTime, err := ptypes.Timestamp(pb.StakeStartTime)
+	if err != nil {
+		panic("error time")
+	}
+
+	unstakeTime, err := ptypes.Timestamp(pb.UnstakeStartTime)
+	if err != nil {
+		panic("error time")
+	}
+
+	return &VoteBucket{
+		Index:            pb.Index,
+		StakedAmount:     amount,
+		StakedDuration:   time.Duration(pb.StakedDuration) * 24 * time.Hour,
+		AutoStake:        pb.AutoStake,
+		StakeStartTime:   stakeTime,
+		UnstakeStartTime: unstakeTime,
 	}
 }
 

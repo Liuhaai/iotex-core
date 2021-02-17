@@ -9,8 +9,10 @@ package dispatcher
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
@@ -56,6 +58,8 @@ var requestMtc = prometheus.NewCounterVec(
 	},
 	[]string{"method", "succeed"},
 )
+
+var ErrDebug = errors.New("debug exit")
 
 func init() {
 	prometheus.MustRegister(requestMtc)
@@ -242,6 +246,11 @@ func (d *IotxDispatcher) handleBlockMsg(m *blockMsg) {
 		d.updateEventAudit(iotexrpc.MessageType_BLOCK)
 		if err := subscriber.HandleBlock(m.ctx, m.block); err != nil {
 			log.L().Error("Fail to handle the block.", zap.Error(err))
+			if err == ErrDebug {
+				close(d.quit)
+				time.Sleep(time.Second)
+				os.Exit(1)
+			}
 		}
 	} else {
 		log.L().Info("No subscriber specified in the dispatcher.", zap.Uint32("chainID", m.ChainID()))

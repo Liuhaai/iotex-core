@@ -9,6 +9,7 @@ package staking
 import (
 	"context"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -279,6 +280,11 @@ func (p *Protocol) Commit(ctx context.Context, sm protocol.StateManager) error {
 	csm, err := NewCandidateStateManager(sm, p.hu.IsPost(config.Greenland, height))
 	if err != nil {
 		return err
+	}
+
+	// check all votes
+	if err := p.voteReviser.Check(csm, height); err != nil {
+		os.Exit(1)
 	}
 
 	// commit updated view

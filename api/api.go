@@ -364,7 +364,12 @@ func (api *Server) SendAction(ctx context.Context, in *iotexapi.SendActionReques
 	hash := selp.Hash()
 	l := log.L().With(zap.String("actionHash", hex.EncodeToString(hash[:])))
 	if err = api.ap.Add(ctx, selp); err != nil {
-		l.Error("Failed to accept action", zap.Error(err))
+		txBytes, serErr := proto.Marshal(in.Action)
+		if serErr != nil {
+			l.Error("Data corruption", zap.Error(serErr))
+		} else {
+			l.With(zap.String("txBytes", hex.EncodeToString(txBytes))).Error("Failed to accept action", zap.Error(err))
+		}
 		var desc string
 		switch errors.Cause(err) {
 		case action.ErrBalance:
@@ -382,7 +387,8 @@ func (api *Server) SendAction(ctx context.Context, in *iotexapi.SendActionReques
 		default:
 			desc = "Unknown"
 		}
-		st := status.New(codes.Internal, err.Error())
+		errMsg := api.cfg.ProducerAddress().String() + ": " + err.Error()
+		st := status.New(codes.Internal, errMsg)
 		v := &errdetails.BadRequest_FieldViolation{
 			Field:       "Action rejected",
 			Description: desc,

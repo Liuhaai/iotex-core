@@ -7,6 +7,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"math"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -47,6 +49,7 @@ import (
 	"github.com/iotexproject/iotex-core/db"
 	"github.com/iotexproject/iotex-core/gasstation"
 	"github.com/iotexproject/iotex-core/pkg/unit"
+	"github.com/iotexproject/iotex-core/pkg/version"
 	"github.com/iotexproject/iotex-core/state"
 	"github.com/iotexproject/iotex-core/state/factory"
 	"github.com/iotexproject/iotex-core/test/identityset"
@@ -295,6 +298,14 @@ var (
 			0,
 			20000,
 			10000,
+		},
+		// genesis block
+		{
+			0,
+			1,
+			1,
+			0,
+			0,
 		},
 	}
 
@@ -703,6 +714,15 @@ var (
 			9,
 			9,
 		},
+		// genesis block
+		{
+			0,
+			1,
+			true,
+			1,
+			0,
+			0,
+		},
 	}
 
 	getLogsTest = []struct {
@@ -1017,6 +1037,8 @@ func TestServer_GetBlockMetas(t *testing.T) {
 	require := require.New(t)
 	cfg := newConfig(t)
 
+	config.SetGenesisTimestamp(config.Default.Genesis.Timestamp)
+	block.LoadGenesisHash()
 	svr, bfIndexFile, err := createServer(cfg, false)
 	require.NoError(err)
 	defer func() {
@@ -1042,6 +1064,11 @@ func TestServer_GetBlockMetas(t *testing.T) {
 		meta := res.BlkMetas[0]
 		require.Equal(test.gasLimit, meta.GasLimit)
 		require.Equal(test.gasUsed, meta.GasUsed)
+		if test.start == 0 {
+			// genesis block
+			h := block.GenesisHash()
+			require.Equal(meta.Hash, hex.EncodeToString(h[:]))
+		}
 		var prevBlkPb *iotextypes.BlockMeta
 		for _, blkPb := range res.BlkMetas {
 			if prevBlkPb != nil {
@@ -1980,8 +2007,20 @@ func TestServer_GetRawBlocks(t *testing.T) {
 		require.NoError(err)
 		blkInfos := res.Blocks
 		require.Equal(test.numBlks, len(blkInfos))
-		var numActions int
-		var numReceipts int
+		if test.startHeight == 0 {
+			// verify genesis block
+			header := blkInfos[0].Block.Header.Core
+			require.EqualValues(version.ProtocolVersion, header.Version)
+			require.Zero(header.Height)
+			ts, err := ptypes.TimestampProto(time.Unix(config.GenesisTimestamp(), 0))
+			require.NoError(err)
+			require.Equal(ts, header.Timestamp)
+			require.Equal(0, bytes.Compare(hash.ZeroHash256[:], header.PrevBlockHash))
+			require.Equal(0, bytes.Compare(hash.ZeroHash256[:], header.TxRoot))
+			require.Equal(0, bytes.Compare(hash.ZeroHash256[:], header.DeltaStateDigest))
+			require.Equal(0, bytes.Compare(hash.ZeroHash256[:], header.ReceiptRoot))
+		}
+		var numActions, numReceipts int
 		for _, blkInfo := range blkInfos {
 			numActions += len(blkInfo.Block.Body.Actions)
 			numReceipts += len(blkInfo.Receipts)

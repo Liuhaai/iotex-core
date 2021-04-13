@@ -641,18 +641,19 @@ func (api *Server) GetRawBlocks(
 	if in.StartHeight > tipHeight {
 		return nil, status.Error(codes.InvalidArgument, "start height should not exceed tip height")
 	}
+	endHeight := in.StartHeight + in.Count - 1
+	if endHeight > tipHeight {
+		endHeight = tipHeight
+	}
 	var res []*iotexapi.BlockInfo
-	for height := int(in.StartHeight); height <= int(tipHeight); height++ {
-		if uint64(len(res)) >= in.Count {
-			break
-		}
-		blk, err := api.dao.GetBlockByHeight(uint64(height))
+	for height := in.StartHeight; height <= endHeight; height++ {
+		blk, err := api.dao.GetBlockByHeight(height)
 		if err != nil {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		var receiptsPb []*iotextypes.Receipt
-		if in.WithReceipts {
-			receipts, err := api.dao.GetReceipts(uint64(height))
+		if in.WithReceipts && height > 0 {
+			receipts, err := api.dao.GetReceipts(height)
 			if err != nil {
 				return nil, status.Error(codes.NotFound, err.Error())
 			}
@@ -662,7 +663,7 @@ func (api *Server) GetRawBlocks(
 		}
 		var transactionLogs *iotextypes.TransactionLogs
 		if in.WithTransactionLogs {
-			if transactionLogs, err = api.dao.TransactionLogs(uint64(height)); err != nil {
+			if transactionLogs, err = api.dao.TransactionLogs(height); err != nil {
 				return nil, status.Error(codes.NotFound, err.Error())
 			}
 		}
@@ -1241,9 +1242,11 @@ func (api *Server) getBlockMetaByHeight(height uint64) (*iotextypes.BlockMeta, e
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 	// get block's receipt
-	blk.Receipts, err = api.dao.GetReceipts(height)
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
+	if blk.Height() > 0 {
+		blk.Receipts, err = api.dao.GetReceipts(height)
+		if err != nil {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 	}
 	return generateBlockMeta(blk), nil
 }
@@ -1254,7 +1257,10 @@ func generateBlockMeta(blk *block.Block) *iotextypes.BlockMeta {
 	hash := header.HashBlock()
 	height := header.Height()
 	ts, _ := ptypes.TimestampProto(header.Timestamp())
-	producerAddress := header.ProducerAddress()
+	var producerAddress string
+	if blk.Height() > 0 {
+		producerAddress = header.ProducerAddress()
+	}
 	txRoot := header.TxRoot()
 	receiptRoot := header.ReceiptRoot()
 	deltaStateDigest := header.DeltaStateDigest()

@@ -27,7 +27,6 @@ import (
 	"github.com/iotexproject/iotex-core/action/protocol/vote"
 	"github.com/iotexproject/iotex-core/action/protocol/vote/candidatesutil"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/db"
 	"github.com/iotexproject/iotex-core/db/batch"
 	"github.com/iotexproject/iotex-core/state"
@@ -35,12 +34,16 @@ import (
 	"github.com/iotexproject/iotex-core/test/mock/mock_chainmanager"
 )
 
+var (
+	defaultChainPollInitialCandidatesInterval time.Duration = 10 * time.Second
+)
+
 func initConstruct(ctrl *gomock.Controller) (Protocol, context.Context, protocol.StateManager, *types.ElectionResult, error) {
-	cfg := config.Default
-	cfg.Genesis.EasterBlockHeight = 1 // set up testing after Easter Height
-	cfg.Genesis.ProbationIntensityRate = 90
-	cfg.Genesis.ProbationEpochPeriod = 2
-	cfg.Genesis.ProductivityThreshold = 75
+	var cfg genesis.Genesis
+	cfg.EasterBlockHeight = 1 // set up testing after Easter Height
+	cfg.ProbationIntensityRate = 90
+	cfg.ProbationEpochPeriod = 2
+	cfg.ProductivityThreshold = 75
 	ctx := protocol.WithBlockCtx(
 		context.Background(),
 		protocol.BlockCtx{
@@ -63,7 +66,7 @@ func initConstruct(ctrl *gomock.Controller) (Protocol, context.Context, protocol
 				},
 			},
 		),
-		cfg.Genesis,
+		cfg,
 	)
 	ctx = protocol.WithActionCtx(
 		ctx,
@@ -188,11 +191,11 @@ func initConstruct(ctrl *gomock.Controller) (Protocol, context.Context, protocol
 		indexer,
 		2,
 		2,
-		cfg.Genesis.DardanellesNumSubEpochs,
-		cfg.Genesis.ProductivityThreshold,
-		cfg.Genesis.ProbationEpochPeriod,
-		cfg.Genesis.UnproductiveDelegateMaxCacheSize,
-		cfg.Genesis.ProbationIntensityRate)
+		cfg.DardanellesNumSubEpochs,
+		cfg.ProductivityThreshold,
+		cfg.ProbationEpochPeriod,
+		cfg.UnproductiveDelegateMaxCacheSize,
+		cfg.ProbationIntensityRate)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -201,7 +204,7 @@ func initConstruct(ctrl *gomock.Controller) (Protocol, context.Context, protocol
 		committee,
 		uint64(123456),
 		func(uint64) (time.Time, error) { return time.Now(), nil },
-		cfg.Chain.PollInitialCandidatesInterval,
+		defaultChainPollInitialCandidatesInterval,
 		slasher)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -209,7 +212,7 @@ func initConstruct(ctrl *gomock.Controller) (Protocol, context.Context, protocol
 	if err := setCandidates(ctx, sm, indexer, candidates, 1); err != nil {
 		return nil, nil, nil, nil, err
 	}
-	if err := setNextEpochProbationList(sm, indexer, 1, vote.NewProbationList(cfg.Genesis.ProbationIntensityRate)); err != nil {
+	if err := setNextEpochProbationList(sm, indexer, 1, vote.NewProbationList(cfg.ProbationIntensityRate)); err != nil {
 		return nil, nil, nil, nil, err
 	}
 	return p, ctx, sm, r, err

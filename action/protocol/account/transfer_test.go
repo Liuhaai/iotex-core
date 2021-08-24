@@ -24,7 +24,6 @@ import (
 	"github.com/iotexproject/iotex-core/action/protocol/rewarding"
 	"github.com/iotexproject/iotex-core/blockchain/block"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/state"
 	"github.com/iotexproject/iotex-core/test/identityset"
 	"github.com/iotexproject/iotex-core/testutil"
@@ -56,7 +55,7 @@ func TestProtocol_HandleTransfer(t *testing.T) {
 	require.NoError(reward.Register(registry))
 	chainCtx := genesis.WithGenesisContext(
 		protocol.WithRegistry(context.Background(), registry),
-		config.Default.Genesis,
+		genesis.Default,
 	)
 	ctx := protocol.WithBlockCtx(chainCtx, protocol.BlockCtx{})
 	require.NoError(reward.CreateGenesisStates(ctx, sm))

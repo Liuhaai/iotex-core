@@ -284,7 +284,7 @@ func TestGasEstimate(t *testing.T) {
 		gas, consume, refund uint64
 		data                 []byte
 	}{
-		{config.Default.Genesis.BlockGasLimit, 8200300, 1000000, make([]byte, 20000)},
+		{genesis.Default.BlockGasLimit, 8200300, 1000000, make([]byte, 20000)},
 		{1000000, 245600, 100000, make([]byte, 5600)},
 		{500000, 21000, 10000, make([]byte, 36)},
 	} {

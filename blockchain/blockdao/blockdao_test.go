@@ -17,7 +17,6 @@ import (
 	"github.com/iotexproject/iotex-core/blockchain/block"
 	"github.com/iotexproject/iotex-core/blockchain/filedao"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/db"
 	"github.com/iotexproject/iotex-core/pkg/compress"
 	"github.com/iotexproject/iotex-core/pkg/unit"
@@ -176,7 +175,7 @@ func TestBlockDAO(t *testing.T) {
 	}
 
 	testBlockDao := func(dao BlockDAO, t *testing.T) {
-		ctx := genesis.WithGenesisContext(context.Background(), config.Default.Genesis)
+		ctx := genesis.WithGenesisContext(context.Background(), genesis.Default)
 		require.NoError(dao.Start(ctx))
 		defer func() {
 			require.NoError(dao.Stop(ctx))
@@ -271,7 +270,7 @@ func TestBlockDAO(t *testing.T) {
 	}
 
 	testDeleteDao := func(dao BlockDAO, t *testing.T) {
-		ctx := genesis.WithGenesisContext(context.Background(), config.Default.Genesis)
+		ctx := genesis.WithGenesisContext(context.Background(), genesis.Default)
 		require.NoError(dao.Start(ctx))
 		defer func() {
 			require.NoError(dao.Stop(ctx))
@@ -379,8 +378,8 @@ func TestBlockDAO(t *testing.T) {
 
 	cfg := db.DefaultConfig
 	cfg.DbPath = testPath
-	genesis.SetGenesisTimestamp(config.Default.Genesis.Timestamp)
-	block.LoadGenesisHash(&config.Default.Genesis)
+	genesis.SetGenesisTimestamp(genesis.Default.Timestamp)
+	block.LoadGenesisHash(&genesis.Default)
 	for _, v := range daoList {
 		testutil.CleanupPath(t, testPath)
 		dao, err := createTestBlockDAO(v.inMemory, v.legacy, v.compressBlock, cfg)

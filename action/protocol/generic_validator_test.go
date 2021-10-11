@@ -21,7 +21,6 @@ import (
 
 	"github.com/iotexproject/iotex-core/action"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/state"
 	"github.com/iotexproject/iotex-core/test/identityset"
 )
@@ -31,6 +30,7 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	const chainId uint32 = 4689
 	caller, err := address.FromString("io1mflp9m6hcgm2qcghchsdqj3z3eccrnekx9p0ms")
 	require.NoError(err)
 	producer, err := address.FromString("io1emxf8zzqckhgjde6dqd97ts0y3q496gm3fdrl6")
@@ -51,13 +51,13 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 		BlockchainCtx{
 			Tip: TipInfo{
 				Height:    0,
-				Hash:      config.Default.Genesis.Hash(),
-				Timestamp: time.Unix(config.Default.Genesis.Timestamp, 0),
+				Hash:      genesis.Default.Hash(),
+				Timestamp: time.Unix(genesis.Default.Timestamp, 0),
 			},
 		},
 	)
 
-	ctx = genesis.WithGenesisContext(ctx, config.Default.Genesis)
+	ctx = genesis.WithGenesisContext(ctx, genesis.Default)
 
 	valid := NewGenericValidator(nil, func(sr StateReader, addr string) (*state.Account, error) {
 		pk := identityset.PrivateKey(27).PublicKey()
@@ -79,7 +79,7 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 		selp, err := action.Sign(elp, identityset.PrivateKey(28))
 		require.NoError(err)
 		nselp := action.SealedEnvelope{}
-		require.NoError(nselp.LoadProto(selp.Proto()))
+		require.NoError(nselp.LoadProto(selp.Proto(), chainId))
 		require.NoError(valid.Validate(ctx, nselp))
 	})
 	t.Run("Gas limit low", func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 		selp, err := action.Sign(elp, identityset.PrivateKey(28))
 		require.NoError(err)
 		nselp := action.SealedEnvelope{}
-		require.NoError(nselp.LoadProto(selp.Proto()))
+		require.NoError(nselp.LoadProto(selp.Proto(), chainId))
 		err = valid.Validate(ctx, nselp)
 		require.Error(err)
 		require.True(strings.Contains(err.Error(), "insufficient gas"))
@@ -107,7 +107,7 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 		selp, err := action.Sign(elp, identityset.PrivateKey(27))
 		require.NoError(err)
 		nselp := action.SealedEnvelope{}
-		require.NoError(nselp.LoadProto(selp.Proto()))
+		require.NoError(nselp.LoadProto(selp.Proto(), chainId))
 		err = valid.Validate(ctx, nselp)
 		require.Error(err)
 		require.True(strings.Contains(err.Error(), "invalid state of account"))
@@ -123,7 +123,7 @@ func TestActionProtoAndGenericValidator(t *testing.T) {
 		selp, err := action.Sign(elp, identityset.PrivateKey(28))
 		require.NoError(err)
 		nselp := action.SealedEnvelope{}
-		require.NoError(nselp.LoadProto(selp.Proto()))
+		require.NoError(nselp.LoadProto(selp.Proto(), chainId))
 		err = valid.Validate(ctx, nselp)
 		require.Error(err)
 		require.True(strings.Contains(err.Error(), "nonce is too low"))

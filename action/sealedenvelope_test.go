@@ -36,6 +36,7 @@ func TestSealedEnvelope_Basic(t *testing.T) {
 
 func TestSealedEnvelope_Proto(t *testing.T) {
 	req := require.New(t)
+	const chainId uint32 = 4689
 	se, err := createSealedEnvelope()
 	req.NoError(err)
 	tsf, ok := se.Envelope.Action().(*Transfer)
@@ -60,12 +61,12 @@ func TestSealedEnvelope_Proto(t *testing.T) {
 	} {
 		se.encoding = v.encoding
 		se.signature = v.sig
-		req.Contains(se2.LoadProto(se.Proto()).Error(), v.err)
+		req.Contains(se2.LoadProto(se.Proto(), chainId).Error(), v.err)
 	}
 
 	se.encoding = 1
 	se.signature = validSig
-	req.NoError(se.LoadProto(se.Proto()))
+	req.NoError(se.LoadProto(se.Proto(), chainId))
 	tsf2, ok := se.Envelope.Action().(*Transfer)
 	req.True(ok)
 	req.Equal(tsf, tsf2)

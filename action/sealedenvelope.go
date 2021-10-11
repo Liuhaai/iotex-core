@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/pkg/util/byteutil"
 )
 
@@ -81,7 +80,7 @@ func (sealed *SealedEnvelope) Proto() *iotextypes.Action {
 }
 
 // LoadProto loads from proto scheme.
-func (sealed *SealedEnvelope) LoadProto(pbAct *iotextypes.Action) error {
+func (sealed *SealedEnvelope) LoadProto(pbAct *iotextypes.Action, chainId uint32) error {
 	if pbAct == nil {
 		return errors.New("empty action proto to load")
 	}
@@ -110,16 +109,15 @@ func (sealed *SealedEnvelope) LoadProto(pbAct *iotextypes.Action) error {
 		if err != nil {
 			return err
 		}
-		if _, err = rlpSignedHash(tx, config.EVMNetworkID(), pbAct.GetSignature()); err != nil {
+		if _, err = rlpSignedHash(tx, chainId, pbAct.GetSignature()); err != nil {
 			return err
 		}
-		sealed.evmNetworkID = config.EVMNetworkID()
+		sealed.evmNetworkID = chainId
 	case iotextypes.Encoding_IOTEX_PROTOBUF:
 		break
 	default:
 		return errors.Errorf("unknown encoding type %v", encoding)
 	}
-
 	// clear 'sealed' and populate new value
 	sealed.Envelope = elp
 	sealed.srcPubkey = srcPub

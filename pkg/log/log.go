@@ -12,11 +12,10 @@ import (
 	"os"
 	"sync"
 
+	"github.com/pkg/errors"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/pkg/errors"
 )
 
 // GlobalConfig defines the global logger configurations.

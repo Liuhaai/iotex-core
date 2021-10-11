@@ -54,7 +54,7 @@ func initConstructStakingCommittee(ctrl *gomock.Controller) (Protocol, context.C
 	}
 	ctx = genesis.WithGenesisContext(
 		protocol.WithRegistry(ctx, registry),
-		config.Default.Genesis,
+		genesis.Default,
 	)
 	ctx = protocol.WithBlockchainCtx(ctx, protocol.BlockchainCtx{})
 	ctx = protocol.WithActionCtx(

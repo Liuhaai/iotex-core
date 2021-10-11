@@ -19,6 +19,7 @@ import (
 )
 
 func TestActionProtoAndVerify(t *testing.T) {
+	const chainId uint32 = 4689
 	require := require.New(t)
 	data, err := hex.DecodeString("")
 	require.NoError(err)
@@ -36,7 +37,7 @@ func TestActionProtoAndVerify(t *testing.T) {
 		require.NoError(Verify(selp))
 
 		nselp := &SealedEnvelope{}
-		require.NoError(nselp.LoadProto(selp.Proto()))
+		require.NoError(nselp.LoadProto(selp.Proto(), chainId))
 
 		selpHash, err := selp.Hash()
 		require.NoError(err)

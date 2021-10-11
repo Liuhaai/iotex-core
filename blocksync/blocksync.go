@@ -17,7 +17,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/iotexproject/iotex-core/blockchain/block"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/pkg/lifecycle"
 	"github.com/iotexproject/iotex-core/pkg/log"
 	"github.com/iotexproject/iotex-core/pkg/routine"
@@ -32,6 +31,18 @@ type (
 	BlockByHeight func(uint64) (*block.Block, error)
 	// CommitBlock commits a block to blockchain
 	CommitBlock func(*block.Block) error
+
+	// BlockSync is the config struct for the BlockSync
+	Config struct {
+		Interval              time.Duration `yaml:"interval"` // update duration
+		ProcessSyncRequestTTL time.Duration `yaml:"processSyncRequestTTL"`
+		BufferSize            uint64        `yaml:"bufferSize"`
+		IntervalSize          uint64        `yaml:"intervalSize"`
+		// MaxRepeat is the maximal number of repeat of a block sync request
+		MaxRepeat int `yaml:"maxRepeat"`
+		// RepeatDecayStep is the step for repeat number decreasing by 1
+		RepeatDecayStep int `yaml:"repeatDecayStep"`
+	}
 )
 
 // BlockSync defines the interface of blocksyncer
@@ -46,7 +57,7 @@ type BlockSync interface {
 
 // blockSyncer implements BlockSync interface
 type blockSyncer struct {
-	cfg config.BlockSync
+	cfg Config
 	buf *blockBuffer
 
 	tipHeightHandler     TipHeight
@@ -73,6 +84,17 @@ type peerBlock struct {
 	block *block.Block
 }
 
+var (
+	DefaultConfig = Config{
+		Interval:              30 * time.Second,
+		ProcessSyncRequestTTL: 10 * time.Second,
+		BufferSize:            200,
+		IntervalSize:          20,
+		MaxRepeat:             3,
+		RepeatDecayStep:       1,
+	}
+)
+
 func newPeerBlock(pid string, blk *block.Block) *peerBlock {
 	return &peerBlock{
 		pid:   pid,
@@ -82,7 +104,7 @@ func newPeerBlock(pid string, blk *block.Block) *peerBlock {
 
 // NewBlockSyncer returns a new block syncer instance
 func NewBlockSyncer(
-	cfg config.BlockSync,
+	cfg Config,
 	tipHeightHandler TipHeight,
 	blockByHeightHandler BlockByHeight,
 	commitBlockHandler CommitBlock,

@@ -17,7 +17,6 @@ import (
 
 	"github.com/iotexproject/iotex-core/action/protocol"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 )
 
 func TestAdminPb(t *testing.T) {
@@ -40,7 +39,7 @@ func TestAdminPb(t *testing.T) {
 	r.False(a.hasFoundationBonusExtension())
 
 	// add foundation bonus extension
-	a.foundationBonusExtension = config.Default.Genesis.Rewarding.FoundationBonusExtension
+	a.foundationBonusExtension = genesis.Default.Rewarding.FoundationBonusExtension
 	b1, err := a.Serialize()
 	r.NoError(err)
 	r.Equal(b, b1[:len(b)])

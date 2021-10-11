@@ -364,7 +364,7 @@ func (api *Server) SendAction(ctx context.Context, in *iotexapi.SendActionReques
 	log.L().Debug("receive send action request")
 	var selp action.SealedEnvelope
 	var err error
-	if err = selp.LoadProto(in.Action); err != nil {
+	if err = selp.LoadProto(in.Action, config.EVMNetworkID()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 

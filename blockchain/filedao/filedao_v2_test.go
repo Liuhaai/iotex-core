@@ -21,7 +21,6 @@ import (
 
 	"github.com/iotexproject/iotex-core/blockchain/block"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
-	"github.com/iotexproject/iotex-core/config"
 	"github.com/iotexproject/iotex-core/db"
 	"github.com/iotexproject/iotex-core/pkg/compress"
 	"github.com/iotexproject/iotex-core/testutil"
@@ -258,8 +257,8 @@ func TestNewFdInterface(t *testing.T) {
 	cfg.DbPath = testPath
 	_, err = newFileDAOv2(0, cfg)
 	r.Equal(ErrNotSupported, err)
-	genesis.SetGenesisTimestamp(config.Default.Genesis.Timestamp)
-	block.LoadGenesisHash(&config.Default.Genesis)
+	genesis.SetGenesisTimestamp(genesis.Default.Timestamp)
+	block.LoadGenesisHash(&genesis.Default)
 
 	for _, compress := range []string{"", compress.Snappy} {
 		for _, start := range []uint64{1, 5, blockStoreBatchSize + 1, 4 * blockStoreBatchSize} {

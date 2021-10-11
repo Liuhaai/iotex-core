@@ -42,7 +42,7 @@ func (b *Body) LoadProto(pbBlock *iotextypes.BlockBody) error {
 	b.Actions = []action.SealedEnvelope{}
 	for _, actPb := range pbBlock.Actions {
 		act := action.SealedEnvelope{}
-		if err := act.LoadProto(actPb); err != nil {
+		if err := act.LoadProto(actPb, 4689); err != nil {
 			return err
 		}
 		b.Actions = append(b.Actions, act)

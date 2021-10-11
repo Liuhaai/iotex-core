@@ -110,7 +110,7 @@ func (gs *GasStation) SuggestGasPrice() (uint64, error) {
 // EstimateGasForAction estimate gas for action
 func (gs *GasStation) EstimateGasForAction(actPb *iotextypes.Action) (uint64, error) {
 	var selp action.SealedEnvelope
-	if err := selp.LoadProto(actPb); err != nil {
+	if err := selp.LoadProto(actPb, config.EVMNetworkID()); err != nil {
 		return 0, err
 	}
 	// Special handling for executions

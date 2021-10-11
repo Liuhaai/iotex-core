@@ -559,7 +559,7 @@ func (cs *ChainService) ReportFullness(_ context.Context, _ iotexrpc.MessageType
 // HandleAction handles incoming action request.
 func (cs *ChainService) HandleAction(ctx context.Context, actPb *iotextypes.Action) error {
 	var act action.SealedEnvelope
-	if err := act.LoadProto(actPb); err != nil {
+	if err := act.LoadProto(actPb, config.EVMNetworkID()); err != nil {
 		return err
 	}
 	ctx = protocol.WithRegistry(ctx, cs.registry)

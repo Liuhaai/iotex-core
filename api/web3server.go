@@ -169,9 +169,9 @@ func (svr *Web3Server) handlePOSTReq(req *http.Request) interface{} {
 	for _, web3Req := range web3Reqs {
 		var (
 			res    interface{}
-			err    error
-			params = web3Req.Get("params").Value()
-			method = web3Req.Get("method").Value()
+			err    error = nil
+			params       = web3Req.Get("params").Value()
+			method       = web3Req.Get("method").Value()
 		)
 		switch method {
 		case "eth_gasPrice":
@@ -250,12 +250,12 @@ func (svr *Web3Server) handlePOSTReq(req *http.Request) interface{} {
 			err := errors.Wrapf(errors.New("web3 method not found"), "method: %s\n", web3Req.Get("method"))
 			return packAPIResult(nil, err, 0)
 		}
-		if err != nil {
-			// temporally used for monitor and debug
-			log.L().Error("web3 server err",
-				zap.String("input", fmt.Sprintf("%+v", web3Req)),
-				zap.Error(err))
-		}
+		// if err != nil {
+		// temporally used for monitor and debug
+		log.L().Error("web3 server err",
+			zap.String("input", fmt.Sprintf("%+v", web3Req)),
+			zap.Error(err))
+		// }
 		web3Resps = append(web3Resps, packAPIResult(res, err, int(web3Req.Get("id").Int())))
 		web3ServerMtc.WithLabelValues(method.(string)).Inc()
 		web3ServerMtc.WithLabelValues("requests_total").Inc()

@@ -25,16 +25,23 @@ import (
 type nonceWithTTL struct {
 	nonce    uint64
 	deadline time.Time
+	idx      int
 }
 
 type noncePriorityQueue []*nonceWithTTL
 
 func (h noncePriorityQueue) Len() int           { return len(h) }
 func (h noncePriorityQueue) Less(i, j int) bool { return h[i].nonce < h[j].nonce }
-func (h noncePriorityQueue) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h noncePriorityQueue) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].idx = i
+	h[j].idx = j
+}
 
 func (h *noncePriorityQueue) Push(x interface{}) {
 	if in, ok := x.(*nonceWithTTL); ok {
+		n := len(*h)
+		in.idx = n
 		*h = append(*h, in)
 	}
 }
@@ -146,21 +153,20 @@ func (q *actQueue) cleanTimeout() []action.SealedEnvelope {
 	}
 	var (
 		removedFromQueue = make([]action.SealedEnvelope, 0)
+		removedFromIndex = make([]*nonceWithTTL, 0)
 		timeNow          = q.clock.Now()
 		size             = len(q.index)
 	)
-	for i := 0; i < size; {
+	for i := 0; i < size; i++ {
 		if timeNow.After(q.index[i].deadline) {
 			removedFromQueue = append(removedFromQueue, q.items[q.index[i].nonce])
 			delete(q.items, q.index[i].nonce)
-			q.index[i] = q.index[size-1]
-			size--
-			continue
+			removedFromIndex = append(removedFromIndex, q.index[i])
 		}
-		i++
 	}
-	q.index = q.index[:size]
-	heap.Init(&q.index)
+	for i := range removedFromIndex {
+		heap.Remove(&q.index, removedFromIndex[i].idx)
+	}
 	return removedFromQueue
 }
 

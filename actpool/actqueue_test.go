@@ -237,12 +237,12 @@ func TestActQueueCleanTimeout(t *testing.T) {
 	q.items[7] = tsf7
 
 	q.index = []*nonceWithTTL{
-		{1, validTime},
-		{5, validTime},
-		{2, validTime},
-		{6, validTime},
-		{7, invalidTime},
-		{3, validTime},
+		{1, validTime, 0},
+		{5, validTime, 1},
+		{2, validTime, 2},
+		{6, validTime, 3},
+		{7, invalidTime, 4},
+		{3, validTime, 5},
 	}
 	q.cleanTimeout()
 	require.Equal(5, len(q.index))
@@ -252,12 +252,12 @@ func TestActQueueCleanTimeout(t *testing.T) {
 	}
 
 	q.index = []*nonceWithTTL{
-		{1, validTime},
-		{5, validTime},
-		{2, validTime},
-		{6, validTime},
-		{7, invalidTime},
-		{3, invalidTime},
+		{1, validTime, 0},
+		{5, validTime, 1},
+		{2, validTime, 2},
+		{6, validTime, 3},
+		{7, invalidTime, 4},
+		{3, invalidTime, 5},
 	}
 	ret := q.cleanTimeout()
 	require.Equal(2, len(ret))

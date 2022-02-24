@@ -349,6 +349,8 @@ func executeInEVM(ctx context.Context, evmParams *Params, stateDB *StateDBAdapte
 	remainingGas -= intriGas
 	contractRawAddress := action.EmptyAddress
 	executor := vm.AccountRef(evmParams.txCtx.Origin)
+	_, span := tracer.NewSpan(ctx, "evm.Call")
+	defer span.End()
 	var ret []byte
 	var evmErr error
 	if evmParams.contract == nil {

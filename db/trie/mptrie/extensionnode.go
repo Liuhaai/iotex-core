@@ -152,6 +152,9 @@ func (e *extensionNode) Child() node {
 }
 
 func (e *extensionNode) Flush() error {
+	if e.mpt.async && !e.dirty {
+		return nil
+	}
 	if err := e.child.Flush(); err != nil {
 		return err
 	}

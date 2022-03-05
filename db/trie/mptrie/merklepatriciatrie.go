@@ -176,7 +176,6 @@ func (mpt *merklePatriciaTrie) Get(key []byte) ([]byte, error) {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
 
-	trieMtc.WithLabelValues("root", "Get").Inc()
 	kt, err := mpt.checkKeyType(key)
 	if err != nil {
 		return nil, err
@@ -196,7 +195,6 @@ func (mpt *merklePatriciaTrie) Delete(key []byte) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 
-	trieMtc.WithLabelValues("root", "Delete").Inc()
 	kt, err := mpt.checkKeyType(key)
 	if err != nil {
 		return err
@@ -217,7 +215,6 @@ func (mpt *merklePatriciaTrie) Upsert(key []byte, value []byte) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 
-	trieMtc.WithLabelValues("root", "Upsert").Inc()
 	kt, err := mpt.checkKeyType(key)
 	if err != nil {
 		return err

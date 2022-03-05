@@ -78,7 +78,6 @@ func (b *branchNode) MarkAsRoot() {
 }
 
 func (b *branchNode) Children() []node {
-	trieMtc.WithLabelValues("branchNode", "children").Inc()
 	children := []node{}
 	for index := 0; index < radix; index++ {
 		if c, ok := b.children[byte(index)]; ok {
@@ -90,7 +89,6 @@ func (b *branchNode) Children() []node {
 }
 
 func (b *branchNode) Delete(key keyType, offset uint8) (node, error) {
-	trieMtc.WithLabelValues("branchNode", "delete").Inc()
 	offsetKey := key[offset]
 	child, err := b.child(offsetKey)
 	if err != nil {
@@ -144,7 +142,6 @@ func (b *branchNode) Delete(key keyType, offset uint8) (node, error) {
 }
 
 func (b *branchNode) Upsert(key keyType, offset uint8, value []byte) (node, error) {
-	trieMtc.WithLabelValues("branchNode", "upsert").Inc()
 	var newChild node
 	offsetKey := key[offset]
 	child, err := b.child(offsetKey)
@@ -162,7 +159,6 @@ func (b *branchNode) Upsert(key keyType, offset uint8, value []byte) (node, erro
 }
 
 func (b *branchNode) Search(key keyType, offset uint8) (node, error) {
-	trieMtc.WithLabelValues("branchNode", "search").Inc()
 	child, err := b.child(key[offset])
 	if err != nil {
 		return nil, err
@@ -171,7 +167,6 @@ func (b *branchNode) Search(key keyType, offset uint8) (node, error) {
 }
 
 func (b *branchNode) proto(flush bool) (proto.Message, error) {
-	trieMtc.WithLabelValues("branchNode", "serialize").Inc()
 	nodes := []*triepb.BranchNodePb{}
 	for index := 0; index < radix; index++ {
 		if c, ok := b.children[byte(index)]; ok {

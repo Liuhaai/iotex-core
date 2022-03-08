@@ -20,9 +20,6 @@ func NewSortList(children map[byte]node) *SortedList {
 	for k := range children {
 		li = append(li, k)
 	}
-	sort.Slice(li, func(i, j int) bool {
-		return li[i] < li[j]
-	})
 	return &SortedList{
 		li: li,
 	}

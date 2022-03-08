@@ -41,10 +41,11 @@ func newLeafNode(
 	return l, nil
 }
 
-func newLeafNodeFromProtoPb(mpt *merklePatriciaTrie, pb *triepb.LeafPb) *leafNode {
+func newLeafNodeFromProtoPb(mpt *merklePatriciaTrie, pb *triepb.LeafPb, hashVal []byte) *leafNode {
 	l := &leafNode{
 		cacheNode: cacheNode{
-			mpt: mpt,
+			mpt:     mpt,
+			hashVal: hashVal,
 		},
 		key:   pb.Path,
 		value: pb.Value,

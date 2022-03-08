@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"os"
+	"runtime/pprof"
 	"strconv"
 	"time"
 
@@ -35,8 +37,17 @@ var (
 			if err := checkSanity(dao, sf, newHeight); err != nil {
 				panic(err)
 			}
+			f, _ := os.OpenFile("cpu.pprof", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+			defer f.Close()
+			f2, _ := os.OpenFile("mem.pprof", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+			defer f2.Close()
+			pprof.StartCPUProfile(f)
+			defer pprof.StopCPUProfile()
 
-			return syncToHeight(initCtx, dao, sf, newHeight)
+			if err := syncToHeight(initCtx, dao, sf, newHeight); err != nil {
+				return err
+			}
+			return pprof.WriteHeapProfile(f2)
 		},
 	}
 )

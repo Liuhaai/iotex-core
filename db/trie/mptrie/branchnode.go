@@ -58,10 +58,11 @@ func newEmptyRootBranchNode(mpt *merklePatriciaTrie) *branchNode {
 	return bnode
 }
 
-func newBranchNodeFromProtoPb(mpt *merklePatriciaTrie, pb *triepb.BranchPb) *branchNode {
+func newBranchNodeFromProtoPb(mpt *merklePatriciaTrie, pb *triepb.BranchPb, hashVal []byte) *branchNode {
 	bnode := &branchNode{
 		cacheNode: cacheNode{
-			mpt: mpt,
+			mpt:     mpt,
+			hashVal: hashVal,
 		},
 		children: make(map[byte]node, len(pb.Branches)),
 	}

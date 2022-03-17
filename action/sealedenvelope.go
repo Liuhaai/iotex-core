@@ -30,7 +30,11 @@ type SealedEnvelope struct {
 func (sealed *SealedEnvelope) envelopeHash() (hash.Hash256, error) {
 	switch sealed.encoding {
 	case iotextypes.Encoding_ETHEREUM_RLP:
-		tx, err := actionToRLP(sealed.Action())
+		act, ok := sealed.Action().(EthCompatibleAction)
+		if !ok {
+			return hash.ZeroHash256, errors.Errorf("unsupported action")
+		}
+		tx, err := act.ToEthTx()
 		if err != nil {
 			return hash.ZeroHash256, err
 		}
@@ -47,7 +51,11 @@ func (sealed *SealedEnvelope) envelopeHash() (hash.Hash256, error) {
 func (sealed *SealedEnvelope) Hash() (hash.Hash256, error) {
 	switch sealed.encoding {
 	case iotextypes.Encoding_ETHEREUM_RLP:
-		tx, err := actionToRLP(sealed.Action())
+		act, ok := sealed.Action().(EthCompatibleAction)
+		if !ok {
+			return hash.ZeroHash256, errors.Errorf("unsupported action")
+		}
+		tx, err := act.ToEthTx()
 		if err != nil {
 			return hash.ZeroHash256, err
 		}
@@ -110,7 +118,11 @@ func (sealed *SealedEnvelope) LoadProto(pbAct *iotextypes.Action) error {
 	switch encoding {
 	case iotextypes.Encoding_ETHEREUM_RLP:
 		// verify action type can support RLP-encoding
-		tx, err := actionToRLP(elp.Action())
+		act, ok := sealed.Action().(EthCompatibleAction)
+		if !ok {
+			return errors.Errorf("unsupported action")
+		}
+		tx, err := act.ToEthTx()
 		if err != nil {
 			return err
 		}

@@ -103,8 +103,10 @@ func newInjectionProcessor() (*injectProcessor, error) {
 
 func (p *injectProcessor) randAccounts(num int) (*util.AccountManager, error) {
 	addrKeys := make([]*util.AddressKey, 0, num)
-	for i := 0; i < num; i++ {
-		private, err := crypto.GenerateKey()
+	// for i := 0; i < num; i++ {
+	for i := 0; i < 1; i++ {
+		// private, err := crypto.GenerateKey()
+		private, err := crypto.HexStringToPrivateKey("3b3a4ccb94b92b43af8e3987d181d340a754e6b4168811f3a80bdc7e6edbcda3")
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +283,7 @@ func (p *injectProcessor) injectProcessV3(ctx context.Context, actionType int) {
 	var (
 		bufferSize uint64 = 200
 		gaslimit   uint64
-		payLoad    string = string(getMultiSendData(100))
+		payLoad    string = hex.EncodeToString(getMultiSendData(1))
 		contract   string = "io1fczp3fa46w2uhhpq48eark4vmqcd99rn958ytg"
 		err        error
 	)
@@ -293,7 +295,7 @@ func (p *injectProcessor) injectProcessV3(ctx context.Context, actionType int) {
 		gaslimit = 10000
 		payLoad = ""
 	} else {
-		payLoad = opMul
+		// payLoad = opMul
 
 		//deploy contract
 		// contractGas, err := p.estimateGasLimitForExecution(actionType, action.EmptyAddress, p.gasPrice, contractByteCode)
@@ -428,7 +430,11 @@ func (p *injectProcessor) InjectionV3(ctx context.Context, ch chan action.Sealed
 func (p *injectProcessor) injectV3(selp action.SealedEnvelope) {
 	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Duration(rawInjectCfg.retryInterval)*time.Second), rawInjectCfg.retryNum)
 	rerr := backoff.Retry(func() error {
-		return p.api.SendAction(context.Background(), selp)
+		err := p.api.SendAction(context.Background(), selp)
+		if err != nil {
+			log.L().Error("Failed to inject.", zap.Error(err))
+		}
+		return err
 	}, bo)
 	if rerr != nil {
 		log.L().Error("Failed to inject.", zap.Error(rerr))
@@ -630,19 +636,19 @@ func init() {
 	flag := injectCmd.Flags()
 	flag.StringVar(&rawInjectCfg.configPath, "injector-config-path", "./tools/actioninjector.v2/gentsfaddrs.yaml",
 		"path of config file of genesis transfer addresses")
-	flag.StringVar(&rawInjectCfg.serverAddr, "addr", "127.0.0.1:14014", "target ip:port for grpc connection")
+	flag.StringVar(&rawInjectCfg.serverAddr, "addr", "api.testnet.iotex.one:443", "target ip:port for grpc connection")
 	flag.Int64Var(&rawInjectCfg.transferAmount, "transfer-amount", 0, "execution amount")
 	flag.StringVar(&rawInjectCfg.contract, "contract", "io1pmjhyksxmz2xpxn2qmz4gx9qq2kn2gdr8un4xq", "smart contract address")
 	flag.Int64Var(&rawInjectCfg.executionAmount, "execution-amount", 0, "execution amount")
-	flag.StringVar(&rawInjectCfg.actionType, "action-type", "transfer", "action type to inject")
+	flag.StringVar(&rawInjectCfg.actionType, "action-type", "execution", "action type to inject")
 	flag.Uint64Var(&rawInjectCfg.retryNum, "retry-num", 5, "maximum number of rpc retries")
 	flag.IntVar(&rawInjectCfg.retryInterval, "retry-interval", 60, "sleep interval between two consecutive rpc retries")
 	flag.DurationVar(&rawInjectCfg.duration, "duration", 60*time.Hour, "duration when the injection will run")
 	flag.DurationVar(&rawInjectCfg.resetInterval, "reset-interval", 10*time.Second, "time interval to reset nonce counter")
-	flag.IntVar(&rawInjectCfg.aps, "aps", 200, "actions to be injected per second")
+	flag.IntVar(&rawInjectCfg.aps, "aps", 120, "actions to be injected per second")
 	flag.IntVar(&rawInjectCfg.randAccounts, "rand-accounts", 20, "number of accounst to use")
 	flag.Uint64Var(&rawInjectCfg.workers, "workers", 10, "number of workers")
-	flag.BoolVar(&rawInjectCfg.insecure, "insecure", true, "insecure network")
+	flag.BoolVar(&rawInjectCfg.insecure, "insecure", false, "insecure network")
 	flag.BoolVar(&rawInjectCfg.checkReceipt, "check-recipt", false, "check recept")
 	flag.StringVar(&rawInjectCfg.loadTokenAmount, "load-token-amount", "50000000000000000000", "init load how much token to inject accounts")
 	rootCmd.AddCommand(injectCmd)

@@ -72,6 +72,7 @@ func (c *Client) EstimateGas(caller string, act action.Action) (uint64, error) {
 	)
 	switch tx := act.(type) {
 	case *action.Execution:
+		log.L().Info("estimate..")
 		ret, err = c.api.EstimateActionGasConsumption(context.Background(), &iotexapi.EstimateActionGasConsumptionRequest{
 			Action: &iotexapi.EstimateActionGasConsumptionRequest_Execution{
 				Execution: tx.Proto(),

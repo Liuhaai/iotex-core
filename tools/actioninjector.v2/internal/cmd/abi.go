@@ -16,7 +16,7 @@ var (
 )
 
 func getMultiSendData(num int) []byte {
-	f, err := os.Open("erc20_multisend.abi")
+	f, err := os.Open("./tools/actioninjector.v2/internal/cmd/erc20_multisend.abi")
 	if err != nil {
 		panic(err)
 	}

@@ -56,9 +56,9 @@ func TestGetWeb3Reqs(t *testing.T) {
 	for _, test := range testData {
 		t.Run(test.testName, func(t *testing.T) {
 			if test.hasHeader {
-				test.req.Header.Set("Content-Type", _contentType)
+				test.req.Header.Set("Content-Type", "application/json")
 			}
-			_, err := parseWeb3Reqs(test.req)
+			_, err := parseWeb3Reqs(test.req.Body)
 			if test.hasError {
 				require.Error(err)
 			} else {
@@ -68,12 +68,12 @@ func TestGetWeb3Reqs(t *testing.T) {
 	}
 }
 
-func TestServeHTTP(t *testing.T) {
+func TestHandlePOSTReq(t *testing.T) {
 	require := require.New(t)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	core := mock_apicoreservice.NewMockCoreService(ctrl)
-	svr := NewWeb3Server(core, testutil.RandomPort(), "", 10)
+	svr := NewWeb3Server(core, "", WithHTTPPort(testutil.RandomPort()))
 
 	// wrong http method
 	request1, _ := http.NewRequest(http.MethodGet, "http://url.com", nil)
@@ -121,9 +121,9 @@ func TestServeHTTP(t *testing.T) {
 }
 
 func getServerResp(svr *Web3Server, req *http.Request) *httptest.ResponseRecorder {
-	req.Header.Set("Content-Type", _contentType)
+	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
-	svr.ServeHTTP(resp, req)
+	svr.httpSvr.ServeHTTP(resp, req)
 	return resp
 }
 
@@ -132,7 +132,7 @@ func TestGasPrice(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	core := mock_apicoreservice.NewMockCoreService(ctrl)
-	web3svr := NewWeb3Server(core, testutil.RandomPort(), "", 10)
+	web3svr := NewWeb3Server(core, "", WithHTTPPort(testutil.RandomPort()))
 	core.EXPECT().SuggestGasPrice().Return(uint64(1), nil)
 	ret, err := web3svr.gasPrice()
 	require.NoError(err)

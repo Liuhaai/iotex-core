@@ -153,10 +153,11 @@ var (
 		},
 		Dispatcher: dispatcher.DefaultConfig,
 		API: API{
-			UseRDS:    false,
-			Port:      14014,
-			Web3Port:  15014,
-			TpsWindow: 10,
+			UseRDS:            false,
+			GRPCPort:          14014,
+			Web3HTTPPort:      15014,
+			Web3WebSocketPort: 16014,
+			TpsWindow:         10,
 			GasStation: GasStation{
 				SuggestBlockWindow: 20,
 				DefaultGas:         uint64(unit.Qev),
@@ -304,14 +305,15 @@ type (
 
 	// API is the api service config
 	API struct {
-		UseRDS          bool          `yaml:"useRDS"`
-		Port            int           `yaml:"port"`
-		Web3Port        int           `yaml:"web3port"`
-		RedisCacheURL   string        `yaml:"redisCacheURL"`
-		TpsWindow       int           `yaml:"tpsWindow"`
-		GasStation      GasStation    `yaml:"gasStation"`
-		RangeQueryLimit uint64        `yaml:"rangeQueryLimit"`
-		Tracer          tracer.Config `yaml:"tracer"`
+		UseRDS            bool          `yaml:"useRDS"`
+		GRPCPort          int           `yaml:"port"`
+		Web3HTTPPort      int           `yaml:"web3port"`
+		Web3WebSocketPort int           `yaml:"webSocketPort"`
+		RedisCacheURL     string        `yaml:"redisCacheURL"`
+		TpsWindow         int           `yaml:"tpsWindow"`
+		GasStation        GasStation    `yaml:"gasStation"`
+		RangeQueryLimit   uint64        `yaml:"rangeQueryLimit"`
+		Tracer            tracer.Config `yaml:"tracer"`
 	}
 
 	// GasStation is the gas station config

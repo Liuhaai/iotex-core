@@ -598,8 +598,9 @@ func newTransferConfig(
 	cfg.Chain.EnableAsyncIndexWrite = true
 	cfg.ActPool.MinGasPriceStr = "0"
 	cfg.Consensus.Scheme = config.StandaloneScheme
-	cfg.API.Port = apiPort
-	cfg.API.Web3Port = testutil.RandomPort()
+	cfg.API.GRPCPort = apiPort
+	cfg.API.Web3HTTPPort = testutil.RandomPort()
+	cfg.API.Web3WebSocketPort = testutil.RandomPort()
 	cfg.Genesis.BlockInterval = 800 * time.Millisecond
 
 	return cfg, nil

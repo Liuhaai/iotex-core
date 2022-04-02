@@ -93,8 +93,8 @@ func NewServerV2(
 	}
 	return &ServerV2{
 		core:       coreAPI,
-		GrpcServer: NewGRPCServer(coreAPI, cfg.Port),
-		web3Server: NewWeb3Server(coreAPI, cfg.Web3Port, cfg.RedisCacheURL, cfg.RangeQueryLimit),
+		GrpcServer: NewGRPCServer(coreAPI, cfg.GRPCPort),
+		web3Server: NewWeb3Server(coreAPI, cfg.RedisCacheURL, WithHTTPPort(cfg.Web3HTTPPort), WithWebsocketPort(cfg.Web3WebSocketPort)),
 		tracer:     tp,
 	}, nil
 }

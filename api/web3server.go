@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -29,16 +28,46 @@ import (
 )
 
 const (
-	_contentType                 = "application/json"
 	_metamaskBalanceContractAddr = "io1k8uw2hrlvnfq8s2qpwwc24ws2ru54heenx8chr"
 )
 
-// Web3Server contains web3 server and the pointer to api coreservice
-type Web3Server struct {
-	queryLimit  uint64
-	web3Server  *http.Server
-	coreService CoreService
-	cache       apiCache
+type (
+	// Web3Handler handle JRPC request
+	Web3Handler interface {
+		HandlePOSTReq(reader io.Reader) interface{}
+	}
+
+	// Web3Server contains web3 server and the pointer to api coreservice
+	Web3Server struct {
+		coreService  CoreService
+		cache        apiCache
+		httpSvr      *HTTPServer
+		websocketSvr *WebsocketServer
+	}
+)
+
+type (
+	// Web3Option defines the option of web3server
+	Web3Option func(*svrOption)
+
+	svrOption struct {
+		httpPort      int
+		websocketPort int
+	}
+)
+
+// WithHTTPPort defines the port of http server
+func WithHTTPPort(port int) Web3Option {
+	return func(op *svrOption) {
+		op.httpPort = port
+	}
+}
+
+// WithWebsocketPort defines the port of http server
+func WithWebsocketPort(port int) Web3Option {
+	return func(op *svrOption) {
+		op.websocketPort = port
+	}
 }
 
 type (
@@ -88,54 +117,57 @@ func init() {
 }
 
 // NewWeb3Server creates a new web3 server
-func NewWeb3Server(core CoreService, httpPort int, cacheURL string, queryLimit uint64) *Web3Server {
-	svr := &Web3Server{
-		web3Server: &http.Server{
-			Addr: ":" + strconv.Itoa(httpPort),
-		},
+func NewWeb3Server(core CoreService, cacheURL string, opts ...Web3Option) *Web3Server {
+	web3 := &Web3Server{
 		coreService: core,
-		queryLimit:  queryLimit,
+		cache:       newAPICache(15*time.Minute, cacheURL),
 	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/", svr)
-	svr.web3Server.Handler = mux
-	svr.cache = newAPICache(15*time.Minute, cacheURL)
-	return svr
+	op := &svrOption{}
+	for _, opt := range opts {
+		opt(op)
+	}
+	if op.httpPort != 0 {
+		web3.httpSvr = NewHTTPServer(op.httpPort, web3)
+	}
+	if op.websocketPort != 0 {
+		web3.websocketSvr = NewWebSocketServer(op.websocketPort, web3)
+	}
+	return web3
 }
 
 // Start starts the API server
 func (svr *Web3Server) Start(_ context.Context) error {
-	go func() {
-		if err := svr.web3Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.L().Fatal("Node failed to serve.", zap.Error(err))
+	if svr.httpSvr != nil {
+		if err := svr.httpSvr.Start(context.Background()); err != nil {
+			return err
 		}
-	}()
+	}
+	if svr.websocketSvr != nil {
+		if err := svr.websocketSvr.Start(context.Background()); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // Stop stops the API server
 func (svr *Web3Server) Stop(_ context.Context) error {
-	return svr.web3Server.Shutdown(context.Background())
-}
-
-func (svr *Web3Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-	case "POST":
-		httpResp := svr.handlePOSTReq(req)
-
-		// write results into http reponse
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		if err := json.NewEncoder(w).Encode(httpResp); err != nil {
-			log.L().Warn("fail to respond request.")
+	if svr.websocketSvr != nil {
+		if err := svr.websocketSvr.Stop(context.Background()); err != nil {
+			return err
 		}
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+	if svr.httpSvr != nil {
+		if err := svr.httpSvr.Stop(context.Background()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (svr *Web3Server) handlePOSTReq(req *http.Request) interface{} {
-	web3Reqs, err := parseWeb3Reqs(req)
+// HandlePOSTReq handles web3 request
+func (svr *Web3Server) HandlePOSTReq(reader io.Reader) interface{} {
+	web3Reqs, err := parseWeb3Reqs(reader)
 	if err != nil {
 		err := errors.Wrap(err, "failed to parse web3 requests.")
 		return &web3Response{
@@ -259,8 +291,8 @@ func (svr *Web3Server) handleWeb3Req(web3Req *gjson.Result) interface{} {
 	}
 }
 
-func parseWeb3Reqs(req *http.Request) (gjson.Result, error) {
-	data, err := io.ReadAll(req.Body)
+func parseWeb3Reqs(reader io.Reader) (gjson.Result, error) {
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return gjson.Result{}, err
 	}

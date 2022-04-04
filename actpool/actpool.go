@@ -460,11 +460,14 @@ func (ap *actPool) enqueueAction(addr address.Address, act action.SealedEnvelope
 
 // TODO: multithread
 func (ap *actPool) removeActs(acts []action.SealedEnvelope) {
+	if len(acts) == 0 {
+		return
+	}
 	var wg sync.WaitGroup
 	mu := sync.Mutex{}
 	for _, act := range acts {
 		wg.Add(1)
-		func(act *action.SealedEnvelope) {
+		go func(act *action.SealedEnvelope) {
 			defer wg.Done()
 			hash, err := act.Hash()
 			if err != nil {
@@ -505,9 +508,7 @@ func (ap *actPool) removeActs(acts []action.SealedEnvelope) {
 func (ap *actPool) updateAccount(sender string) {
 	queue := ap.accountActs[sender]
 	acts := queue.UpdateQueue()
-	if len(acts) > 0 {
-		ap.removeActs(acts)
-	}
+	ap.removeActs(acts)
 	// Delete the queue entry if it becomes empty
 	if queue.Empty() {
 		delete(ap.accountActs, sender)

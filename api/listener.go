@@ -25,6 +25,12 @@ type (
 		AddResponder(Responder) error
 	}
 
+	// Responder responds to new block
+	Responder interface {
+		Respond(*block.Block) error
+		Exit()
+	}
+
 	// chainListener implements the Listener interface
 	chainListener struct {
 		capacity  int

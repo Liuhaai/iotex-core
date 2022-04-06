@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	apiutils "github.com/iotexproject/iotex-core/api/utils"
 	"github.com/iotexproject/iotex-core/pkg/log"
 )
 
@@ -53,12 +54,16 @@ func (hSvr *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	httpResp := hSvr.web3Handler.HandlePOSTReq(req.Body)
-
-	// write results into http reponse
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	if err := json.NewEncoder(w).Encode(httpResp); err != nil {
+	err := hSvr.web3Handler.HandlePOSTReq(req.Body, apiutils.JSONWriter{
+		Write: func(resp interface{}) error {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			return json.NewEncoder(w).Encode(resp)
+		},
+		IsWriteOnce: true,
+	},
+	)
+	if err != nil {
 		log.Logger("api").Warn("fail to respond request.", zap.Error(err))
 	}
 }

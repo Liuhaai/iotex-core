@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/iotexproject/iotex-core/action"
+	apiutils "github.com/iotexproject/iotex-core/api/utils"
 	"github.com/iotexproject/iotex-core/pkg/log"
 	"github.com/iotexproject/iotex-core/pkg/util/addrutil"
 )
@@ -34,7 +35,7 @@ const (
 type (
 	// Web3Handler handle JRPC request
 	Web3Handler interface {
-		HandlePOSTReq(reader io.Reader) interface{}
+		HandlePOSTReq(io.Reader, apiutils.JSONWriter) error
 	}
 
 	// Web3Server contains web3 server and the pointer to api coreservice
@@ -166,24 +167,30 @@ func (svr *Web3Server) Stop(_ context.Context) error {
 }
 
 // HandlePOSTReq handles web3 request
-func (svr *Web3Server) HandlePOSTReq(reader io.Reader) interface{} {
+func (svr *Web3Server) HandlePOSTReq(reader io.Reader, writer apiutils.JSONWriter) error {
 	web3Reqs, err := parseWeb3Reqs(reader)
 	if err != nil {
 		err := errors.Wrap(err, "failed to parse web3 requests.")
-		return &web3Response{
+		return writer.Write(&web3Response{
 			id:     0,
 			result: nil,
 			err:    err,
-		}
+		})
 	}
 	if !web3Reqs.IsArray() {
-		return svr.handleWeb3Req(&web3Reqs)
+		// handle "eth_subscribe" and "eth_unsubscribe" requests
+		if (web3Reqs.Get("method").String() == "eth_subscribe" ||
+			web3Reqs.Get("method").String() == "eth_unsubscribe") &&
+			!writer.IsWriteOnce {
+			return svr.handleWeb3Stream(&web3Reqs, writer)
+		}
+		return writer.Write(svr.handleWeb3Req(&web3Reqs))
 	}
 	web3Resps := make([]interface{}, 0)
 	for _, web3Req := range web3Reqs.Array() {
 		web3Resps = append(web3Resps, svr.handleWeb3Req(&web3Req))
 	}
-	return web3Resps
+	return writer.Write(web3Resps)
 }
 
 func (svr *Web3Server) handleWeb3Req(web3Req *gjson.Result) interface{} {
@@ -193,6 +200,8 @@ func (svr *Web3Server) handleWeb3Req(web3Req *gjson.Result) interface{} {
 		method = web3Req.Get("method").Value()
 	)
 	log.Logger("api").Debug("web3Debug", zap.String("requestParams", fmt.Sprintf("%+v", web3Req)))
+	_web3ServerMtc.WithLabelValues(method.(string)).Inc()
+	_web3ServerMtc.WithLabelValues("requests_total").Inc()
 	switch method {
 	case "eth_accounts":
 		res, err = svr.ethAccounts()
@@ -282,13 +291,33 @@ func (svr *Web3Server) handleWeb3Req(web3Req *gjson.Result) interface{} {
 	} else {
 		log.Logger("api").Debug("web3Debug", zap.String("response", fmt.Sprintf("%+v", res)))
 	}
-	_web3ServerMtc.WithLabelValues(method.(string)).Inc()
-	_web3ServerMtc.WithLabelValues("requests_total").Inc()
 	return &web3Response{
 		id:     int(web3Req.Get("id").Int()),
 		result: res,
 		err:    err,
 	}
+}
+
+func (svr *Web3Server) handleWeb3Stream(web3Req *gjson.Result, writer apiutils.JSONWriter) error {
+	var (
+		err    error
+		method = web3Req.Get("method").Value()
+	)
+	log.Logger("api").Debug("web3Debug", zap.String("requestParams", fmt.Sprintf("%+v", web3Req)))
+	_web3ServerMtc.WithLabelValues(method.(string)).Inc()
+	_web3ServerMtc.WithLabelValues("requests_total").Inc()
+	switch method {
+	case "eth_subscribe":
+		err = svr.subscribe(web3Req, writer)
+	case "eth_unsubscribe":
+		err = svr.unSubscribe(web3Req, writer)
+	}
+	if err != nil {
+		log.Logger("api").Error("web3server",
+			zap.String("requestParams", fmt.Sprintf("%+v", web3Req)),
+			zap.Error(err))
+	}
+	return err
 }
 
 func parseWeb3Reqs(reader io.Reader) (gjson.Result, error) {
@@ -859,6 +888,14 @@ func (svr *Web3Server) getFilterLogs(in *gjson.Result) (interface{}, error) {
 		return nil, err
 	}
 	return svr.getLogsWithFilter(from, to, filterObj.Address, filterObj.Topics)
+}
+
+func (svr *Web3Server) subscribe(in *gjson.Result, writer apiutils.JSONWriter) error {
+	return errNotImplemented
+}
+
+func (svr *Web3Server) unSubscribe(in *gjson.Result, writer apiutils.JSONWriter) error {
+	return errNotImplemented
 }
 
 func (svr *Web3Server) unimplemented() (interface{}, error) {

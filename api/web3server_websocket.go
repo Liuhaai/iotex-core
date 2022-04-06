@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
+	apiutils "github.com/iotexproject/iotex-core/api/utils"
 	"github.com/iotexproject/iotex-core/pkg/log"
 )
 
@@ -97,10 +98,15 @@ func (wsSvr *WebsocketServer) handleConnection(ws *websocket.Conn) {
 			return
 		}
 
-		resp := wsSvr.web3Handler.HandlePOSTReq(reader)
-
-		ws.SetWriteDeadline(time.Now().Add(writeWait))
-		if err := ws.WriteJSON(resp); err != nil {
+		err = wsSvr.web3Handler.HandlePOSTReq(reader, apiutils.JSONWriter{
+			Write: func(resp interface{}) error {
+				ws.SetWriteDeadline(time.Now().Add(writeWait))
+				return ws.WriteJSON(resp)
+			},
+			IsWriteOnce: false,
+		},
+		)
+		if err != nil {
 			log.Logger("api").Warn("fail to respond request.", zap.Error(err))
 			return
 		}

@@ -23,6 +23,7 @@ import (
 	"github.com/iotexproject/iotex-core/action"
 	"github.com/iotexproject/iotex-core/action/protocol"
 	"github.com/iotexproject/iotex-core/action/protocol/execution/evm"
+	"github.com/iotexproject/iotex-core/action/protocol/poll"
 	"github.com/iotexproject/iotex-core/actpool"
 	"github.com/iotexproject/iotex-core/blockchain/block"
 	"github.com/iotexproject/iotex-core/blockchain/genesis"
@@ -297,6 +298,17 @@ func (sdb *stateDB) NewBlockBuilder(
 	if err != nil {
 		return nil, err
 	}
+
+	pollProtocol := poll.FindProtocol(sdb.registry)
+	nextDelegates, err := pollProtocol.NextDelegates(ctx, sdb)
+	if err != nil {
+		return nil, err
+	}
+	addrs := make([]string, len(nextDelegates))
+	for _, v := range nextDelegates {
+		addrs = append(addrs, v.Address)
+	}
+	blkBuilder.SetDelegatesAddr(addrs)
 
 	blkCtx := protocol.MustGetBlockCtx(ctx)
 	key := generateWorkingSetCacheKey(blkBuilder.GetCurrentBlockHeader(), blkCtx.Producer.String())

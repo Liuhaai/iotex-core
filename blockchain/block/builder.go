@@ -12,6 +12,7 @@ import (
 	"github.com/iotexproject/go-pkgs/bloom"
 	"github.com/iotexproject/go-pkgs/crypto"
 	"github.com/iotexproject/go-pkgs/hash"
+	"github.com/iotexproject/iotex-address/address"
 	"github.com/pkg/errors"
 
 	"github.com/iotexproject/iotex-core/action"
@@ -81,6 +82,12 @@ func (b *Builder) SetReceiptRoot(h hash.Hash256) *Builder {
 // SetLogsBloom sets the logs bloom filter value after running actions included in this building block.
 func (b *Builder) SetLogsBloom(f bloom.BloomFilter) *Builder {
 	b.blk.Header.logsBloom = f
+	return b
+}
+
+// SetDelegatesAddr sets the delegates addr of next epoch after running actions included in this building block.
+func (b *Builder) SetDelegatesAddr(addrs []address.Address) *Builder {
+	b.blk.Header.delegatesAddr = addrs
 	return b
 }
 

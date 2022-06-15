@@ -12,6 +12,7 @@ import (
 	"github.com/iotexproject/go-pkgs/bloom"
 	"github.com/iotexproject/go-pkgs/crypto"
 	"github.com/iotexproject/go-pkgs/hash"
+	"github.com/iotexproject/iotex-address/address"
 	"github.com/iotexproject/iotex-proto/golang/iotextypes"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -35,6 +36,7 @@ type Header struct {
 	logsBloom        bloom.BloomFilter // bloom filter for all contract events in this block
 	blockSig         []byte            // block signature
 	pubkey           crypto.PublicKey  // block producer's public key
+	delegatesAddr    []address.Address // addresses of delegates of current epoch
 }
 
 // Errors
@@ -74,6 +76,9 @@ func (h *Header) HashBlock() hash.Hash256 { return h.HashHeader() }
 // LogsBloomfilter return the bloom filter for all contract log events
 func (h *Header) LogsBloomfilter() bloom.BloomFilter { return h.logsBloom }
 
+// DelegatesAddr return the addresses of delegates of current epoch
+func (h *Header) DelegatesAddr() []address.Address { return h.delegatesAddr }
+
 // BlockHeaderProto returns BlockHeader proto.
 func (h *Header) BlockHeaderProto() *iotextypes.BlockHeader {
 	header := iotextypes.BlockHeader{
@@ -101,6 +106,9 @@ func (h *Header) BlockHeaderCoreProto() *iotextypes.BlockHeaderCore {
 	}
 	if h.logsBloom != nil {
 		header.LogsBloom = h.logsBloom.Bytes()
+	}
+	if len(h.delegatesAddr) > 0 {
+		// header.DelegatesAddr =  h.delegatesAddr
 	}
 	return &header
 }
@@ -143,6 +151,9 @@ func (h *Header) loadFromBlockHeaderCoreProto(pb *iotextypes.BlockHeaderCore) er
 			return err
 		}
 	}
+	// if len(pb.GetDelegatesAddr()) > 0 {
+	// 	h.delegatesAddr = pb.GetDelegatesAddr()
+	// }
 	return err
 }
 

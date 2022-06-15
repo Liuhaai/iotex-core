@@ -380,15 +380,28 @@ func (builder *Builder) buildBlockSyncer() error {
 		return nil
 	}
 
-	p2pAgent := builder.cs.p2pAgent
-	chain := builder.cs.chain
-	consens := builder.cs.consensus
+	var (
+		p2pAgent           = builder.cs.p2pAgent
+		chain              = builder.cs.chain
+		consens            = builder.cs.consensus
+		commitBlockHandler blocksync.CommitBlock
+	)
 
-	blocksync, err := blocksync.NewBlockSyncer(
-		builder.cfg.BlockSync,
-		chain.TipHeight,
-		builder.cs.blockdao.GetBlockByHeight,
-		func(blk *block.Block) error {
+	if true {
+		commitBlockHandler = func(blk *block.Block) error {
+			// validate
+			if err := consens.ValidateBlockFooter(blk); err != nil { //TODO: shouldn't depend on cons class
+				log.L().Debug("Failed to validate block footer.", zap.Error(err), zap.Uint64("height", blk.Height()))
+				return err
+			}
+			if err := chain.ValidateBlock(blk); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	} else {
+		commitBlockHandler = func(blk *block.Block) error {
 			if err := consens.ValidateBlockFooter(blk); err != nil {
 				log.L().Debug("Failed to validate block footer.", zap.Error(err), zap.Uint64("height", blk.Height()))
 				return err
@@ -422,7 +435,14 @@ func (builder *Builder) buildBlockSyncer() error {
 			log.L().Info("Successfully committed block.", zap.Uint64("height", blk.Height()))
 			consens.Calibrate(blk.Height())
 			return nil
-		},
+		}
+	}
+
+	blocksync, err := blocksync.NewBlockSyncer(
+		builder.cfg.BlockSync,
+		chain.TipHeight,
+		builder.cs.blockdao.GetBlockByHeight,
+		commitBlockHandler,
 		func(ctx context.Context, start uint64, end uint64, repeat int) {
 			peers, err := p2pAgent.Neighbors(ctx)
 			if err != nil {

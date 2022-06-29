@@ -107,7 +107,7 @@ func (l *leafNode) Upsert(cli client, key keyType, offset uint8, value []byte) (
 	return newExtensionNode(cli, l.key[offset:offset+matched], bnode)
 }
 
-func (l *leafNode) Search(_ client, key keyType, offset uint8) (node, error) {
+func (l *leafNode) Search(_ client, key keyType, offset uint8) (*leafNode, error) {
 	if !bytes.Equal(l.key[offset:], key[offset:]) {
 		return nil, trie.ErrNotExist
 	}

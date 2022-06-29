@@ -173,11 +173,7 @@ func (mpt *merklePatriciaTrie) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if l, ok := t.(leaf); ok {
-		return l.Value(), nil
-	}
-
-	return nil, trie.ErrInvalidTrie
+	return t.Value(), nil
 }
 
 func (mpt *merklePatriciaTrie) Delete(key []byte) error {

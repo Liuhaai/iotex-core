@@ -26,7 +26,7 @@ type (
 	}
 
 	node interface {
-		Search(client, keyType, uint8) (node, error)
+		Search(client, keyType, uint8) (*leafNode, error)
 		Delete(client, keyType, uint8) (node, error)
 		Upsert(client, keyType, uint8, []byte) (node, error)
 		Hash(client) ([]byte, error)

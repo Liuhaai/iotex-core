@@ -37,7 +37,7 @@ func (h *hashNode) Upsert(cli client, key keyType, offset uint8, value []byte) (
 	return n.Upsert(cli, key, offset, value)
 }
 
-func (h *hashNode) Search(cli client, key keyType, offset uint8) (node, error) {
+func (h *hashNode) Search(cli client, key keyType, offset uint8) (*leafNode, error) {
 	node, err := h.loadNode(cli)
 	if err != nil {
 		return nil, err

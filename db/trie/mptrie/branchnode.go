@@ -172,7 +172,7 @@ func (b *branchNode) Upsert(cli client, key keyType, offset uint8, value []byte)
 	return b.updateChild(cli, offsetKey, newChild, true)
 }
 
-func (b *branchNode) Search(cli client, key keyType, offset uint8) (node, error) {
+func (b *branchNode) Search(cli client, key keyType, offset uint8) (*leafNode, error) {
 	child, err := b.child(key[offset])
 	if err != nil {
 		return nil, err

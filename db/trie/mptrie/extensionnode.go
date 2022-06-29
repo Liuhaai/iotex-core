@@ -120,7 +120,7 @@ func (e *extensionNode) Upsert(cli client, key keyType, offset uint8, value []by
 	return newExtensionNode(cli, key[offset:offset+matched], bnode)
 }
 
-func (e *extensionNode) Search(cli client, key keyType, offset uint8) (node, error) {
+func (e *extensionNode) Search(cli client, key keyType, offset uint8) (*leafNode, error) {
 	matched := e.commonPrefixLength(key[offset:])
 	if matched != uint8(len(e.path)) {
 		return nil, trie.ErrNotExist

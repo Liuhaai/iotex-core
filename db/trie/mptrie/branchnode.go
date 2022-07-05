@@ -143,7 +143,6 @@ func (b *branchNode) Delete(cli client, key keyType, offset uint8) (node, error)
 			return node.updatePath(
 				cli,
 				append([]byte{orphanKey}, node.path...),
-				false,
 			)
 		case *leafNode:
 			return node, nil
@@ -281,7 +280,7 @@ func (b *branchNode) Clone() (branch, error) {
 			ser:     ser,
 		},
 		children: children,
-		indices:  b.indices,
+		indices:  NewSortedList(children), // TBD
 		isRoot:   b.isRoot,
 	}
 	clone.cacheNode.serializable = clone

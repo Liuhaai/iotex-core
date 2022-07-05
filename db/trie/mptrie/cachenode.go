@@ -11,8 +11,8 @@ import (
 )
 
 type cacheNode struct {
-	dirty bool
 	serializable
+	dirty   bool
 	hashVal []byte
 	ser     []byte
 }

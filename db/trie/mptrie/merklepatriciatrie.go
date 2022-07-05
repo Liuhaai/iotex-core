@@ -188,21 +188,14 @@ func (mpt *merklePatriciaTrie) Delete(key []byte) error {
 	if err != nil {
 		return errors.Wrapf(trie.ErrNotExist, "key %x does not exist", kt)
 	}
-	var bn branch
-	switch n := newRoot.(type) {
-	case branch:
-		bn = n
-	case *hashNode:
-		newRoot, err = n.LoadNode(mpt)
-		if err != nil {
+
+	if hn, ok := newRoot.(*hashNode); ok {
+		if newRoot, err = hn.LoadNode(mpt); err != nil {
 			return err
 		}
-		var ok bool
-		bn, ok = newRoot.(branch)
-		if !ok {
-			panic("unexpected new root")
-		}
-	default:
+	}
+	bn, ok := newRoot.(branch)
+	if !ok {
 		panic("unexpected new root")
 	}
 
@@ -308,6 +301,7 @@ func (mpt *merklePatriciaTrie) loadNode(key []byte) (node, error) {
 	if err := proto.Unmarshal(s, &pb); err != nil {
 		return nil, err
 	}
+	// revert mpt argument?
 	if pbBranch := pb.GetBranch(); pbBranch != nil {
 		return newBranchNodeFromProtoPb(mpt, pbBranch, key), nil
 	}

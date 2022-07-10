@@ -8,6 +8,7 @@ package blockdao
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -115,4 +116,124 @@ func (bic *BlockIndexerChecker) CheckIndexer(ctx context.Context, indexer BlockI
 		tipBlk = blk
 	}
 	return nil
+}
+
+type TargetIndexer struct {
+	Path       string
+	TargetSize uint64
+}
+
+func (target *TargetIndexer) IsSatisfied() (bool, error) {
+	targetSize, err := getfileSize(target.Path)
+	if err != nil {
+		return false, err
+	}
+	return targetSize > target.TargetSize, nil
+}
+
+// CheckIndexer checks a block indexer against block dao
+func (bic *BlockIndexerChecker) CheckIndexerToTargetSize(ctx context.Context, indexer BlockIndexer, target TargetIndexer, progressReporter func(uint64)) error {
+	if satisfied, err := target.IsSatisfied(); err != nil {
+		return err
+	} else if satisfied {
+		return nil
+	}
+
+	bcCtx, ok := protocol.GetBlockchainCtx(ctx)
+	if !ok {
+		return errors.New("failed to find blockchain ctx")
+	}
+	g, ok := genesis.ExtractGenesisContext(ctx)
+	if !ok {
+		return errors.New("failed to find genesis ctx")
+	}
+	tipHeight, err := indexer.Height()
+	if err != nil {
+		return err
+	}
+	daoTip, err := bic.dao.Height()
+	if err != nil {
+		return err
+	}
+	if tipHeight > daoTip {
+		return errors.New("indexer tip height cannot by higher than dao tip height")
+	}
+	tipBlk, err := bic.dao.GetBlockByHeight(tipHeight)
+	if err != nil {
+		return err
+	}
+
+	// -------------------------------------------------
+
+	targetHeight := daoTip
+
+	// -------------------------------------------------
+
+	for i := tipHeight + 1; i <= targetHeight; i++ {
+		blk, err := bic.dao.GetBlockByHeight(i)
+		if err != nil {
+			return err
+		}
+		if blk.Receipts == nil {
+			blk.Receipts, err = bic.dao.GetReceipts(i)
+			if err != nil {
+				return err
+			}
+		}
+		producer := blk.PublicKey().Address()
+		if producer == nil {
+			return errors.New("failed to get address")
+		}
+		bcCtx.Tip.Height = tipBlk.Height()
+		if bcCtx.Tip.Height > 0 {
+			bcCtx.Tip.Hash = tipBlk.HashHeader()
+			bcCtx.Tip.Timestamp = tipBlk.Timestamp()
+		} else {
+			bcCtx.Tip.Hash = g.Hash()
+			bcCtx.Tip.Timestamp = time.Unix(g.Timestamp, 0)
+		}
+		for {
+			if err = indexer.PutBlock(protocol.WithBlockCtx(
+				protocol.WithBlockchainCtx(ctx, bcCtx),
+				protocol.BlockCtx{
+					BlockHeight:    i,
+					BlockTimeStamp: blk.Timestamp(),
+					Producer:       producer,
+					GasLimit:       g.BlockGasLimit,
+				},
+			), blk); err == nil {
+				break
+			}
+			if i < g.HawaiiBlockHeight && errors.Cause(err) == block.ErrDeltaStateMismatch {
+				log.L().Info("delta state mismatch", zap.Uint64("block", i))
+				continue
+			}
+			return err
+		}
+		if progressReporter != nil {
+			progressReporter(i)
+		}
+		tipBlk = blk
+
+		if i%1000 == 0 {
+			if satisfied, err := target.IsSatisfied(); err != nil {
+				return err
+			} else if satisfied {
+				log.L().Info("reach target size", zap.Uint64("block height", i))
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func getfileSize(path string) (uint64, error) {
+	if len(path) == 0 {
+		return 0, errors.New("invaild file path")
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(fi.Size()), nil
 }

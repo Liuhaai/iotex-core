@@ -2,6 +2,8 @@ FROM golang:1.17-alpine as build
 
 WORKDIR apps/iotex-core
 
+ENV IPFS_LOGGING=debug
+
 RUN apk add --no-cache make gcc musl-dev linux-headers git ca-certificates
 
 COPY go.mod .

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/iotexproject/go-pkgs/cache/ttl"
 	"github.com/iotexproject/iotex-address/address"
@@ -239,9 +240,11 @@ func (worker *queueWorker) Reset(ctx context.Context) {
 func (worker *queueWorker) PendingActions(ctx context.Context) []*pendingActions {
 	actionArr := make([]*pendingActions, 0)
 
+	startTime := time.Now()
 	worker.mu.RLock()
 	defer worker.mu.RUnlock()
 	for from, queue := range worker.accountActs {
+		queueStartTime := time.Now()
 		if queue.Empty() {
 			continue
 		}
@@ -252,7 +255,9 @@ func (worker *queueWorker) PendingActions(ctx context.Context) []*pendingActions
 			sender: from,
 			acts:   queue.PendingActs(ctx),
 		})
+		log.L().Debug("actpool packing duration from workers", zap.Duration("queue_pack_time", time.Now().Sub(queueStartTime)))
 	}
+	log.L().Debug("actpool packing duration from workers", zap.Duration("workers_pack_time", time.Now().Sub(startTime)), zap.Int("total accounts", len(worker.accountActs)))
 	return actionArr
 }
 

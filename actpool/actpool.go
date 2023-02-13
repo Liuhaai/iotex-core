@@ -12,6 +12,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -198,6 +199,8 @@ func (ap *actPool) ReceiveBlock(*block.Block) error {
 
 // PendingActionMap returns an action interator with all accepted actions
 func (ap *actPool) PendingActionMap() map[string][]action.SealedEnvelope {
+	// DEBUG
+	startTime := time.Now()
 	var (
 		wg             sync.WaitGroup
 		actsFromWorker = make([][]*pendingActions, _numWorker)
@@ -213,13 +216,14 @@ func (ap *actPool) PendingActionMap() map[string][]action.SealedEnvelope {
 		}(i)
 	}
 	wg.Wait()
-
+	log.L().Debug("actpool packing duration from workers", zap.Duration("workers_pack_time", time.Now().Sub(startTime)))
 	ret := make(map[string][]action.SealedEnvelope, totalAccounts)
 	for _, v := range actsFromWorker {
 		for _, w := range v {
 			ret[w.sender] = w.acts
 		}
 	}
+	log.L().Debug("actpool packing duration total", zap.Duration("pack_time", time.Now().Sub(startTime)))
 	return ret
 }
 
@@ -312,7 +316,10 @@ func (ap *actPool) GetPendingNonce(addrStr string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	startTime := time.Now()
 	if queue := ap.worker[ap.allocatedWorker(addr)].GetQueue(addr); queue != nil {
+		log.L().Debug("actpool get pending nonce", zap.Duration("queue_from_worker_time", time.Now().Sub(startTime)))
+		defer log.L().Debug("actpool get pending nonce", zap.Duration("queue_nonce_end_time", time.Now().Sub(startTime)))
 		return queue.PendingNonce(), nil
 	}
 	ctx := ap.context(context.Background())

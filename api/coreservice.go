@@ -254,12 +254,15 @@ func (core *coreService) Account(addr address.Address) (*iotextypes.AccountMeta,
 	}
 	span.AddEvent("accountutil.AccountStateWithHeight")
 	ctx = genesis.WithGenesisContext(ctx, core.bc.Genesis())
+	log.L().Debug("actpool get pending nonce", zap.Time("state_start_time", time.Now()))
 	state, tipHeight, err := accountutil.AccountStateWithHeight(ctx, core.sf, addr)
 	if err != nil {
 		return nil, nil, status.Error(codes.NotFound, err.Error())
 	}
 	span.AddEvent("ap.GetPendingNonce")
+	log.L().Debug("actpool get pending nonce", zap.Time("nonce_start_time", time.Now()))
 	pendingNonce, err := core.ap.GetPendingNonce(addrStr)
+	log.L().Debug("actpool get pending nonce", zap.Time("nonce_end_time", time.Now()))
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, err.Error())
 	}
